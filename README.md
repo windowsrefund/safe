@@ -26,7 +26,7 @@ In that event, the safe will be created as /data/critical.tar.gz.asc
     $ ls safe*
     ls: cannot access safe*: No such file or directory
     $ mkdir safe
-    $ for i in $(seq 5); do echo "it is a secret" > safe/file$i; done
+    $ for i in $(seq 5); do echo "my secret" > safe/file$i; done
     $ safe.sh -c
     $ ls safe*
     safe.tar.gz.asc
@@ -38,7 +38,7 @@ In that event, the safe will be created as /data/critical.tar.gz.asc
     safe/file4
     safe/file5
     $ safe.sh -o file4
-    it is a secret
+    my secret
     $ safe.sh -r file5
     $ safe.sh -l
     safe/
