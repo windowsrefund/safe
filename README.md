@@ -17,7 +17,7 @@ If you want to create a safe of /data/critical, create a ~/.saferc with:
 
   SOURCE_DIR=/data/critical
 
-In that event, the safe will be created as /data/crital.tar.gz.asc
+In that event, the safe will be created as /data/critical.tar.gz.asc
 
 ##### Example (using default configuration)
 
