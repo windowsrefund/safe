@@ -1,17 +1,17 @@
-### Overview
+##### Overview
 
 A wrapper to act as a safe. By default, the safe will look for a ~/safe
 directory and produce ~/safe.tar.gz.asc
 
-### Assumptions
+##### Assumptions
 
 * Your [GnuPG](http://gnupg.org) config is sane
 
-### Usage
+##### Usage
 
   ./safe.sh -h
 
-### Configuration
+##### Configuration
 
 If you want to create a safe of /data/critical, create a ~/.saferc with:
 
@@ -19,11 +19,10 @@ If you want to create a safe of /data/critical, create a ~/.saferc with:
 
 In that event, the safe will be created as /data/crital.tar.gz.asc
 
-### Example (using default configuration)
+##### Example (using default configuration)
 
     $ pwd
     /home/akosmin
-
     $ ls safe*
     ls: cannot access safe*: No such file or directory
     $ mkdir safe
