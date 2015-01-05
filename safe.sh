@@ -3,17 +3,22 @@
 # safe.sh - wrapper to interact with my encrypted file archive
 
 usage() {
-  echo "Usage: $(basename $0) OPTION"
-  echo "Options:"
-  echo -e "\t-l list contents"
-  echo -e "\t-c create the safe"
-  echo -e "\t-x extract contents"
-  echo -e "\t-b HOST; backup (scp) to HOST. Multiple -b options are supported"
-  echo -e "\t-a FILE; add FILE to the safe and shred the original"
-  echo -e "\t-A FILE; add FILE to the safe but do not shred the original"
-  echo -e "\t-r FILE; remove FILE from the safe"
-  echo -e "\t-o FILE; cat FILE from inside the safe"
-  echo -e "\t-v show version"
+cat << EOF
+Usage: $(basename $0) OPTION
+Options:
+  -l        list contents
+  -c        create the safe
+  -x        extract contents
+  -b HOST   backup (scp) to HOST. Multiple -b options are supported
+  -o FILE   cat FILE from inside the safe
+  -v        show version
+
+The following options create a temporary plaintext copy of the safe
+  -e        edit safe contents
+  -a FILE   add FILE to the safe and shred the original
+  -A FILE   add FILE to the safe but do not shred the original
+  -r FILE   remove FILE from the safe
+EOF
 }
 
 is_or_die() {
@@ -38,7 +43,7 @@ list_safe() {
 extract_safe() {
   is_or_die
   OPTS=" -zx"
-  [ $# -eq 1 ] && OPTS+=" $SOURCE_BASE/$1 -O"
+  [ $# -eq 1 ] && OPTS+=" $SOURCE_BASE/${1#*/} -O"
   gpg --batch -q -d $TAR_ENC | $TAR $OPTS
 }
 
@@ -50,12 +55,18 @@ create_safe() {
 
 search_safe() {
   is_or_die
-  FILE=$(basename $1)
+  FILE=${1#*/}
   for f in $(list_safe); do
-    ARCHIVE_FILE=${f##$SOURCE_BASE/}
-    [ "${f##$SOURCE_BASE/}" == "$FILE" ] && return
+    ARCHIVE_FILE=${f#${SOURCE_BASE}/}
+    [ "$ARCHIVE_FILE" == "$FILE" ] && return
   done
   false
+}
+
+edit_safe() {
+  extract_safe
+  $EDITOR $SOURCE_DIR
+  create_safe
 }
 
 [ $# -ge 1 ] || { usage; exit 1; }
@@ -68,7 +79,7 @@ SOURCE_BASE=$(basename $SOURCE_DIR)
 TAR_ENC=$HOME/${SOURCE_BASE}.tar.gz.asc
 TAR="tar -C $(dirname $SOURCE_DIR)"
 
-while getopts "vlxcb:a:A:r:o:" opt; do
+while getopts "hvlxceb:a:A:r:o:" opt; do
   case $opt in
     x)
       extract_safe
@@ -96,6 +107,12 @@ while getopts "vlxcb:a:A:r:o:" opt; do
     l)
       list_safe
       ;;
+    e)
+      [[ -n $EDITOR ]] && edit_safe || {
+        echo "Please set \$EDITOR in your shell"
+        exit 1
+      }
+      ;;
     c)
       # we could support an optarg here to encrypt to a different reciever
       # and fall back to whomai if not used.
@@ -114,6 +131,10 @@ while getopts "vlxcb:a:A:r:o:" opt; do
       ;;
     v)
       echo "Version $VERSION"
+      ;;
+    h)
+      usage
+      exit 0
       ;;
     *)
       usage

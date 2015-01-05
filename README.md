@@ -13,20 +13,20 @@ directory and produce ~/safe.tar.gz.asc
 
 ##### Configuration
 
-If you want to create a safe of /data/critical, create a ~/.saferc with:
+If you want to create a safe of /my/stuff, create a ~/.saferc with:
 
-  SOURCE_DIR=/data/critical
+  SOURCE_DIR=/my/stuff
 
-In that event, the safe will be created as /data/critical.tar.gz.asc
+In that event, the safe will be created as /my/stuff.tar.gz.asc
 
-##### Example (using default configuration)
+##### Examples (using default configuration and my cat's account)
 
     $ pwd
-    /home/akosmin
+    /home/evil
     $ ls safe*
     ls: cannot access safe*: No such file or directory
     $ mkdir safe
-    $ for i in $(seq 5); do echo "my secret" > safe/file$i; done
+    $ for i in $(seq 3); do echo "secret number $i" > safe/file$i; done
     $ safe.sh -c
     $ ls safe*
     safe.tar.gz.asc
@@ -35,14 +35,31 @@ In that event, the safe will be created as /data/critical.tar.gz.asc
     safe/file1
     safe/file2
     safe/file3
-    safe/file4
-    safe/file5
-    $ safe.sh -o file4
-    my secret
-    $ safe.sh -r file5
+    $ safe.sh -o file3
+    secret number 3
+    $ safe.sh -r file1
     $ safe.sh -l
     safe/
-    safe/file1
     safe/file2
     safe/file3
-    safe/file4
+    $ > /tmp/foobar
+    $ safe.sh -a /tmp/foobar
+    $ test -f /tmp/foobar || echo gone
+    gone
+    $ safe.sh -l
+    safe/
+    safe/file2
+    safe/file3
+    safe/foobar
+    $ > ~/please_do_not_shred_me
+    $ safe.sh -A ~/please_do_not_shred_me
+    $ safe.sh -l
+    safe/
+    safe/file2
+    safe/file3
+    safe/foobar
+    safe/please_do_not_shred_me
+    $ test -f ~/please_do_not_shred_me && echo still here
+    still here
+
+See -h for other features like editing and backups
