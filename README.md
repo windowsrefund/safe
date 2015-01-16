@@ -19,6 +19,13 @@ If you want to create a safe of /my/stuff, create a ~/.saferc with:
 
 In that event, the safe will be created as /my/stuff.tar.gz.asc
 
+You can specifiy the gpg key ID used for encryption in ~/.saferc
+
+  MY_GPG_KEY=0x1234567890ABCDEF
+
+When not set, the script will fall back to using `whoami`. This assumes your
+key can be identified using the id you are logged in with.
+
 ##### Examples (using default configuration and my cat's account)
 
     $ pwd

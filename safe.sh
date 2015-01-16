@@ -49,7 +49,7 @@ extract_safe() {
 
 create_safe() {
   is_or_die $SOURCE_DIR
-  $TAR -cz $SOURCE_BASE | gpg -ear $(whoami) --yes -o $TAR_ENC
+  $TAR -cz $SOURCE_BASE | gpg -ear $MY_GPG_KEY --yes -o $TAR_ENC
   shred_source_dir
 }
 
@@ -74,10 +74,11 @@ edit_safe() {
 CONF=${HOME}/.saferc
 [ -f $CONF ] && . $CONF
 [ -z "$SOURCE_DIR" ] && SOURCE_DIR=${HOME}/safe
-VERSION=1.0.0
+VERSION=1.1.0
 SOURCE_BASE=$(basename $SOURCE_DIR)
 TAR_ENC=$HOME/${SOURCE_BASE}.tar.gz.asc
 TAR="tar -C $(dirname $SOURCE_DIR)"
+[ -z "$MY_GPG_KEY" ] && MY_GPG_KEY=$(whoami)
 
 while getopts "hvlxceb:a:A:r:o:" opt; do
   case $opt in
