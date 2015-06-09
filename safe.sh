@@ -10,6 +10,7 @@ Options:
   -c        create the safe
   -x        extract contents
   -b HOST   backup (scp) to HOST. Multiple -b options are supported
+  -C HOST   compare dates of remote backups. Multiple uses of -C is supported
   -o FILE   cat FILE from inside the safe
   -v        show version
 
@@ -80,7 +81,7 @@ TAR_ENC=$HOME/${SOURCE_BASE}.tar.gz.asc
 TAR="tar -C $(dirname $SOURCE_DIR)"
 [ -z "$MY_GPG_KEY" ] && MY_GPG_KEY=$(whoami)
 
-while getopts "hvlxceb:a:A:r:o:" opt; do
+while getopts "hvlxceC:b:a:A:r:o:" opt; do
   case $opt in
     x)
       extract_safe
@@ -126,7 +127,8 @@ while getopts "hvlxceb:a:A:r:o:" opt; do
       }
       extract_safe $OPTARG
       ;;
-    b)
+    b|C)
+      [[ "$opt" == "C" ]] && COMPARE_BACKUPS=1
       BACKUP_HOSTS+=("$OPTARG")
       is_or_die
       ;;
@@ -145,7 +147,17 @@ while getopts "hvlxceb:a:A:r:o:" opt; do
 done
 
 for BACKUP_HOST in ${BACKUP_HOSTS[@]}; do
-  echo -en "Copying to $BACKUP_HOST... "
-  scp $TAR_ENC ${BACKUP_HOST}: &> /dev/null
-  [ $? -eq 0 ] && echo OK || echo Failed
+  if [[ -z "$COMPARE_BACKUPS" ]]; then
+    echo -en "Copying to $BACKUP_HOST... "
+    scp $TAR_ENC ${BACKUP_HOST}: &> /dev/null
+    [ $? -eq 0 ] && echo OK || echo Failed
+  else
+    TIMESTAMP_REMOTE=$(ssh ${BACKUP_HOST} ls -l --time-style=long-iso $TAR_ENC | awk '{print $6, $7}')
+    echo $TIMESTAMP_REMOTE $BACKUP_HOST
+  fi
 done
+
+if [[ -n "$COMPARE_BACKUPS" ]]; then
+  TIMESTAMP_LOCAL=$(ls -l --time-style=long-iso $TAR_ENC | awk '{print $6, $7}')
+  echo $TIMESTAMP_LOCAL local
+fi
