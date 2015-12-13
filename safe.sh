@@ -75,13 +75,13 @@ edit_safe() {
 CONF=${HOME}/.saferc
 [ -f $CONF ] && . $CONF
 [ -z "$SOURCE_DIR" ] && SOURCE_DIR=${HOME}/safe
-VERSION=1.1.0
+VERSION=1.2.0
 SOURCE_BASE=$(basename $SOURCE_DIR)
 TAR_ENC=$HOME/${SOURCE_BASE}.tar.gz.asc
 TAR="tar -C $(dirname $SOURCE_DIR)"
 [ -z "$MY_GPG_KEY" ] && MY_GPG_KEY=$(whoami)
 
-while getopts "hvlxceC:b:a:A:r:o:" opt; do
+while getopts "hvlxceC:b:a:A:r:o:p:" opt; do
   case $opt in
     x)
       extract_safe
@@ -127,6 +127,9 @@ while getopts "hvlxceC:b:a:A:r:o:" opt; do
       }
       extract_safe $OPTARG
       ;;
+    p)
+      SSH_PORT=$OPTARG
+      ;;
     b|C)
       [[ "$opt" == "C" ]] && COMPARE_BACKUPS=1
       BACKUP_HOSTS+=("$OPTARG")
@@ -149,10 +152,10 @@ done
 for BACKUP_HOST in ${BACKUP_HOSTS[@]}; do
   if [[ -z "$COMPARE_BACKUPS" ]]; then
     echo -en "Copying to $BACKUP_HOST... "
-    scp $TAR_ENC ${BACKUP_HOST}: &> /dev/null
+    scp -P ${SSH_PORT:-22} $TAR_ENC ${BACKUP_HOST}: &> /dev/null
     [ $? -eq 0 ] && echo OK || echo Failed
   else
-    TIMESTAMP_REMOTE=$(ssh ${BACKUP_HOST} ls -l --time-style=long-iso $TAR_ENC | awk '{print $6, $7}')
+    TIMESTAMP_REMOTE=$(ssh -p ${SSH_PORT:-22} ${BACKUP_HOST} ls -l --time-style=long-iso $TAR_ENC | awk '{print $6, $7}')
     echo $TIMESTAMP_REMOTE $BACKUP_HOST
   fi
 done
