@@ -9,6 +9,7 @@ Options:
   -l        list contents
   -c        create the safe
   -x        extract contents
+  -B        backup (scp) to host specified in DEFAULT_BACKUP_HOST variable.
   -b HOST   backup (scp) to HOST. Multiple -b options are supported
   -C HOST   compare dates of remote backups. Multiple uses of -C is supported
   -o FILE   cat FILE from inside the safe
@@ -81,7 +82,7 @@ TAR_ENC=$HOME/${SOURCE_BASE}.tar.gz.asc
 TAR="tar -C $(dirname $SOURCE_DIR)"
 [ -z "$MY_GPG_KEY" ] && MY_GPG_KEY=$(whoami)
 
-while getopts "hvlxceC:b:a:A:r:o:p:" opt; do
+while getopts "hvlxBceC:b:a:A:r:o:p:" opt; do
   case $opt in
     x)
       extract_safe
@@ -130,6 +131,15 @@ while getopts "hvlxceC:b:a:A:r:o:p:" opt; do
     p)
       SSH_PORT=$OPTARG
       ;;
+    B)
+      [[ -n "$DEFAULT_BACKUP_HOST" ]] || {
+        echo DEFAULT_BACKUP_HOST missing in $CONF
+        exit 1
+      }
+      BACKUP_HOSTS+=$DEFAULT_BACKUP_HOST
+      is_or_die
+      ;;
+
     b|C)
       [[ "$opt" == "C" ]] && COMPARE_BACKUPS=1
       BACKUP_HOSTS+=("$OPTARG")
