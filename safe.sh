@@ -31,6 +31,7 @@ is_or_die() {
 }
 
 shred_source_dir() {
+  chmod -R u+w $SOURCE_DIR
   find $SOURCE_DIR -type f | xargs shred -u
   rm -fr $SOURCE_DIR
 }
@@ -89,21 +90,25 @@ while getopts "hvlxBceC:b:a:A:r:o:p:" opt; do
       ;;
     a|A)
       [ -f $OPTARG ] || { echo "Error: $OPTARG is not a file."; exit 1; }
-      search_safe $OPTARG && {
+      search_safe $(basename $OPTARG) && {
         echo "Duplicate filename in $TAR_ENC: $FILE"
         exit 1
       }
       extract_safe
       cp $OPTARG $SOURCE_DIR
-      [ "$1" == "-a" ] && shred -u $OPTARG
+      [ "$1" == "-a" ] && {
+        chmod u+w $OPTARG
+        shred -u $OPTARG
+      }
       create_safe
       ;;
     r)
-      search_safe $OPTARG || {
+    	search_safe $OPTARG || {
         echo "File not found in $TAR_ENC: $FILE"
         exit 1
       }
       extract_safe
+      chmod u+w ${SOURCE_DIR}/$FILE
       shred -u ${SOURCE_DIR}/$FILE
       create_safe
       ;;
