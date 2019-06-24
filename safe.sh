@@ -77,7 +77,7 @@ edit_safe() {
 CONF=${HOME}/.saferc
 [ -f $CONF ] && . $CONF
 [ -z "$SOURCE_DIR" ] && SOURCE_DIR=${HOME}/safe
-VERSION=1.2.0
+VERSION=1.3.0
 SOURCE_BASE=$(basename $SOURCE_DIR)
 TAR_ENC=$HOME/${SOURCE_BASE}.tar.gz.asc
 TAR="tar -C $(dirname $SOURCE_DIR)"
