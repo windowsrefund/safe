@@ -7,11 +7,11 @@ cat << EOF
 Usage: $(basename $0) OPTION
 Options:
   -l        list contents
-  -c        create the safe
+  -C        create the safe
   -x        extract contents
   -B        backup (scp) to host specified in DEFAULT_BACKUP_HOST variable.
   -b HOST   backup (scp) to HOST. Multiple -b options are supported
-  -C HOST   compare dates of remote backups. Multiple uses of -C is supported
+  -c HOST   compare dates of remote backups. Multiple uses of -C is supported
   -o FILE   cat FILE from inside the safe
   -v        show version
 
