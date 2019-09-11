@@ -83,7 +83,7 @@ TAR_ENC=$HOME/${SOURCE_BASE}.tar.gz.asc
 TAR="tar -C $(dirname $SOURCE_DIR)"
 [ -z "$MY_GPG_KEY" ] && MY_GPG_KEY=$(whoami)
 
-while getopts "hvlxBceC:b:a:A:r:o:p:" opt; do
+while getopts "hvlxBCec:b:a:A:r:o:p:" opt; do
   case $opt in
     x)
       extract_safe
@@ -121,7 +121,7 @@ while getopts "hvlxBceC:b:a:A:r:o:p:" opt; do
         exit 1
       }
       ;;
-    c)
+    C)
       # we could support an optarg here to encrypt to a different reciever
       # and fall back to whomai if not used.
       create_safe
@@ -145,7 +145,7 @@ while getopts "hvlxBceC:b:a:A:r:o:p:" opt; do
       is_or_die
       ;;
 
-    b|C)
+    b|c)
       [[ "$opt" == "C" ]] && COMPARE_BACKUPS=1
       BACKUP_HOSTS+=("$OPTARG")
       is_or_die
