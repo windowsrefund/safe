@@ -2,16 +2,20 @@
 #
 # safe.sh - wrapper to interact with my encrypted file archive
 
+error() {
+  echo Error: $@
+  exit 1
+}
+
 usage() {
 cat << EOF
 Usage: $(basename $0) OPTION
 Options:
   -l        list contents
-  -c        create the safe
+  -C        create the safe
   -x        extract contents
-  -B        backup (scp) to host specified in DEFAULT_BACKUP_HOST variable.
-  -b HOST   backup (scp) to HOST. Multiple -b options are supported
-  -C HOST   compare dates of remote backups. Multiple uses of -C is supported
+  -b        backup (scp) to SAFE_REMOTE_HOST defined in ~/.saferc
+  -c        compare date of remote backup on SAFE_REMOTE_HOST defined in ~/.saferc
   -o FILE   cat FILE from inside the safe
   -v        show version
 
@@ -25,8 +29,7 @@ EOF
 
 is_or_die() {
   if [ ! -d ${1:-$TAR_ENC} -a ! -f ${1:-$TAR_ENC} ]; then
-    echo "Unknown or missing: ${1:-$TAR_ENC}"
-    exit 1
+    error Unknown or missing: ${1:-$TAR_ENC}
   fi
 }
 
@@ -54,6 +57,7 @@ create_safe() {
   is_or_die $SOURCE_DIR
   $TAR -cz $SOURCE_BASE | gpg -ear $MY_GPG_KEY --yes -o $TAR_ENC
   shred_source_dir
+  auto_backup
 }
 
 search_safe() {
@@ -64,6 +68,17 @@ search_safe() {
     [ "$ARCHIVE_FILE" == "$FILE" ] && return
   done
   false
+}
+
+auto_backup() {
+  [[ "$SAFE_AUTO_BACKUP" -eq 1 ]] && backup_safe
+}
+
+backup_safe() {
+  is_or_die
+  echo -n "Backup to ${SAFE_REMOTE_HOST}: "
+  scp $TAR_ENC ${SAFE_REMOTE_HOST}: &> /dev/null
+  [[ $? -eq 0 ]] && echo OK || echo Failed
 }
 
 edit_safe() {
@@ -77,23 +92,20 @@ edit_safe() {
 CONF=${HOME}/.saferc
 [ -f $CONF ] && . $CONF
 [ -z "$SOURCE_DIR" ] && SOURCE_DIR=${HOME}/safe
-VERSION=1.3.0
+VERSION=1.4.0
 SOURCE_BASE=$(basename $SOURCE_DIR)
 TAR_ENC=$HOME/${SOURCE_BASE}.tar.gz.asc
 TAR="tar -C $(dirname $SOURCE_DIR)"
 [ -z "$MY_GPG_KEY" ] && MY_GPG_KEY=$(whoami)
 
-while getopts "hvlxBceC:b:a:A:r:o:p:" opt; do
+while getopts "hvlxBCecba:A:r:o:" opt; do
   case $opt in
     x)
       extract_safe
       ;;
     a|A)
-      [ -f $OPTARG ] || { echo "Error: $OPTARG is not a file."; exit 1; }
-      search_safe $(basename $OPTARG) && {
-        echo "Duplicate filename in $TAR_ENC: $FILE"
-        exit 1
-      }
+      [ -f $OPTARG ] || error $OPTARG is not a file
+      search_safe $(basename $OPTARG) && error Duplicate in $TAR_ENC: $FILE
       extract_safe
       cp $OPTARG $SOURCE_DIR
       [ "$1" == "-a" ] && {
@@ -103,9 +115,8 @@ while getopts "hvlxBceC:b:a:A:r:o:p:" opt; do
       create_safe
       ;;
     r)
-    	search_safe $OPTARG || {
-        echo "File not found in $TAR_ENC: $FILE"
-        exit 1
+      search_safe $OPTARG || {
+      error File not found in $TAR_ENC: $FILE
       }
       extract_safe
       chmod u+w ${SOURCE_DIR}/$FILE
@@ -116,39 +127,29 @@ while getopts "hvlxBceC:b:a:A:r:o:p:" opt; do
       list_safe
       ;;
     e)
-      [[ -n $EDITOR ]] && edit_safe || {
-        echo "Please set \$EDITOR in your shell"
-        exit 1
-      }
+      [[ -n $EDITOR ]] || error Please set \$EDITOR in your shell
+      edit_safe
       ;;
-    c)
+    C)
       # we could support an optarg here to encrypt to a different reciever
       # and fall back to whomai if not used.
       create_safe
       ;;
     o)
-      search_safe $OPTARG || {
-        echo "File not found in $TAR_ENC: $FILE"
-        exit 1
-      }
+      search_safe $OPTARG || error File not found in $TAR_ENC: $FILE
       extract_safe $OPTARG
       ;;
-    p)
-      SSH_PORT=$OPTARG
+    b)
+      [[ -n "$SAFE_REMOTE_HOST" ]] || error SAFE_REMOTE_HOST missing in $CONF
+      backup_safe
       ;;
-    B)
-      [[ -n "$DEFAULT_BACKUP_HOST" ]] || {
-        echo DEFAULT_BACKUP_HOST missing in $CONF
-        exit 1
-      }
-      BACKUP_HOSTS+=$DEFAULT_BACKUP_HOST
+    c)
+      [[ -n "$SAFE_REMOTE_HOST" ]] || error SAFE_REMOTE_HOST missing in $CONF
       is_or_die
-      ;;
-
-    b|C)
-      [[ "$opt" == "C" ]] && COMPARE_BACKUPS=1
-      BACKUP_HOSTS+=("$OPTARG")
-      is_or_die
+      TIMESTAMP_REMOTE=$(ssh ${SAFE_REMOTE_HOST} ls -l --time-style=long-iso $TAR_ENC | awk '{print $6, $7}')
+      TIMESTAMP_LOCAL=$(ls -l --time-style=long-iso $TAR_ENC | awk '{print $6, $7}')
+      echo $TIMESTAMP_REMOTE $SAFE_REMOTE_HOST
+      echo $TIMESTAMP_LOCAL local
       ;;
     v)
       echo "Version $VERSION"
@@ -164,18 +165,3 @@ while getopts "hvlxBceC:b:a:A:r:o:p:" opt; do
   esac
 done
 
-for BACKUP_HOST in ${BACKUP_HOSTS[@]}; do
-  if [[ -z "$COMPARE_BACKUPS" ]]; then
-    echo -en "Copying to $BACKUP_HOST... "
-    scp -P ${SSH_PORT:-22} $TAR_ENC ${BACKUP_HOST}: &> /dev/null
-    [ $? -eq 0 ] && echo OK || echo Failed
-  else
-    TIMESTAMP_REMOTE=$(ssh -p ${SSH_PORT:-22} ${BACKUP_HOST} ls -l --time-style=long-iso $TAR_ENC | awk '{print $6, $7}')
-    echo $TIMESTAMP_REMOTE $BACKUP_HOST
-  fi
-done
-
-if [[ -n "$COMPARE_BACKUPS" ]]; then
-  TIMESTAMP_LOCAL=$(ls -l --time-style=long-iso $TAR_ENC | awk '{print $6, $7}')
-  echo $TIMESTAMP_LOCAL local
-fi
